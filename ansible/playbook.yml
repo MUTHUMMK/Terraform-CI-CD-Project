@@ -1,0 +1,69 @@
+
+- hosts: muthu
+  remote_user: ubuntu
+  become: yes
+  tasks:  
+  vars:
+    
+    default_container_name: Auto-deplyment                # change the container name
+    default_container_image: muthummkdh/hackathon:4       # change the your customize image
+#    default_container_command: docker run
+    port: 5000:5000
+
+  tasks:
+
+    - name: Install required system packages
+      apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+        state: latest
+        update_cache: true
+
+    - name: Add Docker GPG apt Key
+      get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/gpg
+  
+    - name: Converting Docker key
+      ansible.builtin.shell:
+        cmd: gpg --dearmor --output /etc/apt/keyrings/docker.gpg /etc/apt/keyrings/gpg
+        creates: /etc/apt/keyrings/docker.gpg
+  
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]  https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Update apt and install docker-ce
+      apt:
+        name: docker-ce
+        state: present
+        update_cache: true
+
+    - name: install docker containerd
+      apt:
+        name: containerd.io
+        state: present
+
+    - name: Install Docker Module for Python
+      pip:
+        name: docker
+
+    - name: Pull default Docker image
+      docker_image:
+        name: "{{ default_container_name }}"
+        source: pull
+
+    - name: Create default containers
+      docker_container:
+        name: "{{ default_container_name }}"
+        image: "{{ default_container_image }}"
+       # command: "{{ default_container_command }}"
+        ports: 
+          - "{{ port }}"
